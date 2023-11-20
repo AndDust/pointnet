@@ -22,7 +22,12 @@ def _fold_bn(conv_module, bn_module):
     # 计算BN的稳定标准差，这是为了避免分母为零或非常小的情况：
     safe_std = torch.sqrt(y_var + bn_module.eps)
     # 设置权重的形状为(输出通道数, 1, 1, 1):
-    w_view = (conv_module.out_channels, 1, 1, 1)
+    w_view = ()
+    if isinstance(conv_module, nn.Conv2d):
+        w_view = (conv_module.out_channels, 1, 1, 1)
+    else:
+        w_view = (conv_module.out_channels, 1, 1)
+
     # 检查BN模块是否使用了affine变换（即是否有学习到的scale和shift参数）：
     # 如果有，根据BN的权重和safe_std调整卷积的权重。
     # 计算新的偏置beta。
