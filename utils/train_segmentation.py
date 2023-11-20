@@ -22,7 +22,8 @@ parser.add_argument(
     '--nepoch', type=int, default=25, help='number of epochs to train for')
 parser.add_argument('--outf', type=str, default='seg', help='output folder')
 parser.add_argument('--model', type=str, default='', help='model path')
-parser.add_argument('--dataset', type=str, required=True, help="dataset path")
+# parser.add_argument('--dataset', type=str, required=True, help="dataset path")
+parser.add_argument('--dataset', type=str, default='/home/nku524/dl/dataset/shapenetcore_partanno_segmentation_benchmark_v0', help="dataset path")
 parser.add_argument('--class_choice', type=str, default='Chair', help="class_choice")
 parser.add_argument('--feature_transform', action='store_true', help="use feature transform")
 
@@ -67,6 +68,8 @@ except OSError:
 blue = lambda x: '\033[94m' + x + '\033[0m'
 
 classifier = PointNetDenseCls(k=num_classes, feature_transform=opt.feature_transform)
+
+print(classifier)
 
 if opt.model != '':
     classifier.load_state_dict(torch.load(opt.model))
@@ -141,3 +144,6 @@ for i,data in tqdm(enumerate(testdataloader, 0)):
         shape_ious.append(np.mean(part_ious))
 
 print("mIOU for class {}: {}".format(opt.class_choice, np.mean(shape_ious)))
+
+if __name__ == '__main__':
+    pass
