@@ -151,3 +151,19 @@ class QuantModel(nn.Module):
             if isinstance(m, QuantModule):
                 module_list += [m]
         module_list[-1].disable_act_quant = True
+
+
+class PointnetQuantModel(nn.Module):
+    def __init__(self, model: nn.Module, weight_quant_params: dict = {}, act_quant_params: dict = {}, is_fusing=True):
+        super().__init__()
+        if is_fusing:
+            """conv、linear进行BN折叠"""
+            search_fold_and_remove_bn(model)
+            """将常规conv2d和linear层递归替换为QuantModule"""
+            self.model = model
+            self.quant_module_refactor(self.model, weight_quant_params, act_quant_params)
+        else:
+            """不进行BN折叠，记录原始的FP model，用于后面对比"""
+            self.model = model
+            """将常规conv2d和linear层递归替换为QuantModule，QuantModule中可以通过开关决定是否打开量化"""
+            self.quant_module_refactor_wo_fuse(self.model, weight_quant_params, act_quant_params)
