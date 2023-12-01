@@ -238,7 +238,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    torch.cuda.set_device(0)
+    torch.cuda.set_device(1)
     seed_all(args.seed)
 
     # build imagenet data loader
@@ -353,9 +353,6 @@ if __name__ == '__main__':
     qnn.cuda()
     qnn.eval()
 
-    """
-        将第一层和最后一层设置为8位 why?
-    """
     if not args.disable_8bit_head_stem:
         print('Setting the first and the last layer to 8-bit')
         qnn.set_first_last_layer_to_8bit()
@@ -368,6 +365,8 @@ if __name__ == '__main__':
     print(qnn)
 
 
+    pointnet_cali_data, pointnet_cali_target = get_train_samples(dataloader, num_samples=64)
+
     cali_data, cali_target = get_train_samples(train_loader, num_samples=args.num_samples)
     device = next(qnn.parameters()).device
 
@@ -375,7 +374,7 @@ if __name__ == '__main__':
     """
         用于权重舍入校准的Kwargs
     """
-    kwargs = dict(cali_data=cali_data, iters=args.iters_w, weight=args.weight,
+    kwargs = dict(cali_data=pointnet_cali_data, iters=args.iters_w, weight=args.weight,
                 b_range=(args.b_start, args.b_end), warmup=args.warmup, opt_mode='mse',
                 lr=args.lr, input_prob=args.input_prob, keep_gpu=not args.keep_cpu, 
                 lamb_r=args.lamb_r, T=args.T, bn_lr=args.bn_lr, lamb_c=args.lamb_c)

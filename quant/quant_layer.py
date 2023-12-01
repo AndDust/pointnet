@@ -456,7 +456,7 @@ class QuantModule(nn.Module):
         act_quant_params：用于激活函数输出量化的参数字典。
         disable_act_quant：一个布尔值，如果设置为 True，将禁用激活函数的输出量化。
     """
-    def __init__(self, org_module: Union[nn.Conv2d, nn.Linear], weight_quant_params: dict = {},
+    def __init__(self, org_module: Union[nn.Conv2d, nn.Linear, nn.Conv1d], weight_quant_params: dict = {},
                  act_quant_params: dict = {}, disable_act_quant=False):
         super(QuantModule, self).__init__()
 
@@ -477,6 +477,10 @@ class QuantModule(nn.Module):
             self.fwd_kwargs = dict(stride=org_module.stride, padding=org_module.padding,
                                    dilation=org_module.dilation, groups=org_module.groups)
             self.fwd_func = F.conv2d
+        elif isinstance(org_module, nn.Conv1d):
+            self.fwd_kwargs = dict(stride=org_module.stride, padding=org_module.padding,
+                                   dilation=org_module.dilation, groups=org_module.groups)
+            self.fwd_func = F.conv1d
         else:
             self.fwd_kwargs = dict()
             self.fwd_func = F.linear
@@ -531,14 +535,32 @@ class QuantModule(nn.Module):
             # print("delta:{} & zero_point:{}".format(self.weight_quantizer.delta.flatten(), self.weight_quantizer.zero_point.flatten()))
             weight = self.weight_quantizer(self.weight)
             # print("Quantized_weight:{}".format(weight.flatten()[0:10]))
-            print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            # print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
             bias = self.bias
         # 不使用权重量化
         else:
             weight = self.org_weight
             bias = self.org_bias
 
+        # out = torch.tensor([0])
+        # try:
+        #     out = self.fwd_func(input, weight, bias, **self.fwd_kwargs)
+        # except:
+        #     print(self.fwd_func)
+        print("----------++++++++--------")
+        print(input.shape)
+        print(self.fwd_func)
+        print(weight.shape)
+        print(self.org_weight.shape)
+
         out = self.fwd_func(input, weight, bias, **self.fwd_kwargs)
+
+        """
+            出错：
+            input : torch.Size([32, 1024, 2500])
+            weight : torch.Size([512, 1024])
+        """
+
         # disable act quantization is designed for convolution before elemental-wise operation,
         # in that case, we apply activation function and quantization after ele-wise op.
         out = self.norm_function(out)

@@ -37,7 +37,7 @@ class QuantModel(nn.Module):
             if type(child_module) in specials:
                 setattr(module, name, specials[type(child_module)](child_module, weight_quant_params, act_quant_params))
                 """对(nn.Conv2d, nn.Linear)进行量化，替换为量化版本的module"""
-            elif isinstance(child_module, (nn.Conv2d, nn.Linear)):
+            elif isinstance(child_module, (nn.Conv2d, nn.Linear, nn.Conv1d)):
                 setattr(module, name, QuantModule(child_module, weight_quant_params, act_quant_params))
                 prev_quantmodule = getattr(module, name)
                 """对(nn.ReLU, nn.ReLU6)进行"""
@@ -84,14 +84,14 @@ class QuantModel(nn.Module):
             """
             if type(child_module) in specials:
                 setattr(module, name, specials[type(child_module)](child_module, weight_quant_params, act_quant_params))
-            elif isinstance(child_module, (nn.Conv2d, nn.Linear)):
+            elif isinstance(child_module, (nn.Conv2d, nn.Linear, nn.Conv1d)):
                 setattr(module, name, QuantModule(child_module, weight_quant_params, act_quant_params))
                 prev_quantmodule = getattr(module, name)
                 """
                     如果找到nn.BatchNorm2d层，并且在此之前有一个QuantModule，则将nn.BatchNorm2d层的功能与前一个QuantModule相关联，
                     并用StraightThrough层替换原始的nn.BatchNorm2d层。
                 """
-            elif isinstance(child_module, nn.BatchNorm2d):
+            elif isinstance(child_module, (nn.BatchNorm2d, nn.BatchNorm1d)):
                 if prev_quantmodule is not None:
                     prev_quantmodule.norm_function = child_module
                     setattr(module, name, StraightThrough())

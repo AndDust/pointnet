@@ -81,7 +81,7 @@ def layer_reconstruction(model: QuantModel, fp_model: QuantModel, layer: QuantMo
     :param warmup: proportion of iterations that no scheduling for temperature
     :param lr: learning rate for act delta learning
     :param p: L_p norm minimization
-    :param lamb_r: hyper-parameter for regularization
+    :param lamb_r: hyper-parameter for regularization®
     :param T: temperature coefficient for KL divergence
     :param bn_lr: learning rate for DC
     :param lamb_c: hyper-parameter for DC
@@ -94,10 +94,10 @@ def layer_reconstruction(model: QuantModel, fp_model: QuantModel, layer: QuantMo
         得到输入qnn该layer的inputs  cached_inps.shape : torch.Size([1024, 3, 224, 224])
         cached_inps ： \hat{A_{l-1}} 相当于去取论文中图3中的A_{l-1}^{FP}
     """
+    cali_data = cali_data.transpose(1, 2)
+
     cached_inps = get_init(model, layer, cali_data, batch_size=batch_size,
                                         input_prob=True, keep_gpu=keep_gpu)
-
-    print(f'最终得到的cached_inps {cached_inps.shape},{cached_inps.flatten()[:10]}')
 
     """
         这一步输入fp_model和fp_layer
@@ -123,6 +123,7 @@ def layer_reconstruction(model: QuantModel, fp_model: QuantModel, layer: QuantMo
     set_act_quantize_params(layer, cali_data=cached_inps[:min(256, cached_inps.size(0))])
 
     '''set state'''
+
     cur_weight, cur_act = True, True
 
     """
@@ -238,6 +239,7 @@ def layer_reconstruction(model: QuantModel, fp_model: QuantModel, layer: QuantMo
         
         '''forward for prediction difference'''
         out_drop = out_all[:batch_size]
+        """该量化层的输出"""
         out_quant = out_all[batch_size:]
 
         """
@@ -246,12 +248,22 @@ def layer_reconstruction(model: QuantModel, fp_model: QuantModel, layer: QuantMo
         """
         output = out_quant
         for num, module in enumerate(module_list):
+
+            print("------num{},name_list[num]:{}".format(num, name_list[num]))
+
             # for ResNet and RegNet
             if name_list[num] == 'fc':
                 output = torch.flatten(output, 1)
             # for MobileNet and MNasNet
             if isinstance(module, torch.nn.Dropout):
                 output = output.mean([2, 3])
+
+            """
+                num2,name_list[num]:fc1
+                input: torch.Size([32, 1024, 2500])
+                <built-in function linear>
+                weight: torch.Size([512, 1024])
+            """
             output = module(output)
         """
             out_drop ： 当前量化层的输出A_l^~

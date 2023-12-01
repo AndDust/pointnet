@@ -106,6 +106,7 @@ def save_inp_oup_data(model: QuantModel, layer: Union[QuantModule, BaseQuantBloc
             (i + 1) * batch_size] ： 当前批次的结束索引位置
         """
         cur_inp = get_inp_out(cali_data[i * batch_size:(i + 1) * batch_size])
+
         """
             每个batch都得到这样的输入
         """
@@ -147,8 +148,8 @@ class DataSaverHook:
         self.output_store = None
 
     def __call__(self, module, input_batch, output_batch):
-        print(f'DataSaverHook 存储了该层input:{input_batch[0].shape},{input_batch[0].flatten()[0:10]}')
-        print(f'DataSaverHook 存储了该层output:{output_batch[0].shape},{output_batch[0].flatten()[0:10]}')
+        # print(f'DataSaverHook 存储了该层input:{input_batch[0].shape},{input_batch[0].flatten()[0:10]}')
+        # print(f'DataSaverHook 存储了该层output:{output_batch[0].shape},{output_batch[0].flatten()[0:10]}')
         if self.store_input:
             self.input_store = input_batch
         if self.store_output:
@@ -261,24 +262,25 @@ class GetLayerInpOut:
             如果您想要在前向钩子中执行更复杂的操作，例如访问类的成员变量或方法，您可以使用一个具有 __call__ 方法的对象。
             在这种情况下，您可以将这个对象传递给 register_forward_hook，因为对象的 __call__ 方法实际上是一个可调用的函数。
         """
-        print(f"注册钩子")
+        # print(f"注册钩子")
         handle = self.layer.register_forward_hook(self.data_saver)
 
         with torch.no_grad():
             # 设置模型的量化状态，包括权重量化和激活量化。
             self.model.set_quant_state(weight_quant=True, act_quant=True)
-            print(f"调用了GetLayerInpOut __call__中的模型前向传播")
+            # print(f"调用了GetLayerInpOut __call__中的模型前向传播")
             try:
                 # 尝试运行模型的前向传递，将输入数据传递到self.device上。
-                print(f"输入数据是{model_input.shape},{model_input.flatten()[0:10]}")
+                # print(f"输入数据是{model_input.shape},{model_input.flatten()[0:10]}")
                 _ = self.model(model_input.to(self.device))
+                print(_)
                 print(f"前向传播结束")
             except StopForwardException:
                 pass
 
         # 注销之前注册的前向钩子
         handle.remove()
-        print(f"注销钩子")
+        # print(f"注销钩子")
 
         """
             钩子函数在该Module(Layer)前向传播过程中把输入数据存储到了self.data_saver.input_store中
@@ -472,7 +474,9 @@ class GetDcFpLayerInpOut:
             out_fp = self.layer(para_input)
 
         """如果开启DC校正"""
+
+        # TODO pointnet的输出是一个tuple,我们只需要output_fp[0]作为pred
         if self.input_prob:
-            return  out_fp.detach(), output_fp.detach(), para_input.detach()
-        return out_fp.detach(), output_fp.detach()
+            return  out_fp.detach(), output_fp[0].detach(), para_input.detach()
+        return out_fp.detach(), output_fp[0].detach()
 
