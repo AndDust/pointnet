@@ -547,11 +547,11 @@ class QuantModule(nn.Module):
         #     out = self.fwd_func(input, weight, bias, **self.fwd_kwargs)
         # except:
         #     print(self.fwd_func)
-        print("----------++++++++--------")
-        print(input.shape)
-        print(self.fwd_func)
-        print(weight.shape)
-        print(self.org_weight.shape)
+        # print("----------++++++++--------")
+        # print(input.shape)
+        # print(self.fwd_func)
+        # print(weight.shape)
+        # print(self.org_weight.shape)
 
         out = self.fwd_func(input, weight, bias, **self.fwd_kwargs)
 

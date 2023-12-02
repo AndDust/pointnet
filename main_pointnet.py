@@ -451,8 +451,8 @@ if __name__ == '__main__':
     """
         qnn完成了reconstruction,使用测试集测试输出精度
     """
-    print('Full quantization (W{}A{}) accuracy: {}'.format(args.n_bits_w, args.n_bits_a,
-                                                           validate_model(test_loader, qnn)))
+    # print('Full quantization (W{}A{}) accuracy: {}'.format(args.n_bits_w, args.n_bits_a,
+    #                                                        validate_model(test_loader, qnn)))
 
     # TODO 测试量化后pointnet
     total_correct = 0

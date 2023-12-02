@@ -9,7 +9,6 @@ from models.mobilenetv2 import InvertedResidual
 from models.mnasnet import _InvertedResidual
 
 from torch.autograd import Variable
-from pointnet.model import STN3d
 
 """ 
     提供了多种神经网络块的量化版本，特别为不同的架构（例如ResNet、RegNetX、MobileNetV2和MNASNet）设计。
@@ -52,15 +51,15 @@ class BaseQuantBlock(nn.Module):
 class QuantSTN3d(BaseQuantBlock):
     def __init__(self,  weight_quant_params: dict = {}, act_quant_params: dict = {}):
         super(QuantSTN3d, self).__init__()
-        self.conv1 = QuantModule(nn.conv1d(3, 64, 1), weight_quant_params, act_quant_params)
+        self.conv1 = QuantModule(nn.Conv1d(3, 64, 1), weight_quant_params, act_quant_params)
         self.conv1.norm_function = nn.BatchNorm1d(64)
         self.conv1.activation_function = nn.ReLU()
 
-        self.conv2 = QuantModule(nn.conv1d(64, 128, 1), weight_quant_params, act_quant_params)
+        self.conv2 = QuantModule(nn.Conv1d(64, 128, 1), weight_quant_params, act_quant_params)
         self.conv2.norm_function = nn.BatchNorm1d(128)
         self.conv2.activation_function = nn.ReLU()
 
-        self.conv3 = QuantModule(nn.conv1d(128, 1024, 1), weight_quant_params, act_quant_params)
+        self.conv3 = QuantModule(nn.Conv1d(128, 1024, 1), weight_quant_params, act_quant_params)
         self.conv3.norm_function = nn.BatchNorm1d(1024)
         self.conv3.activation_function = nn.ReLU()
 
@@ -97,8 +96,6 @@ class QuantSTN3d(BaseQuantBlock):
 
         if self.use_act_quant:
             x = self.act_quantizer(x)
-        return x
-
         return x
 
 """

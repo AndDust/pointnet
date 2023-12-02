@@ -233,7 +233,7 @@ def layer_reconstruction(model: QuantModel, fp_model: QuantModel, layer: QuantMo
             a_opt.zero_grad()
 
         """
-            
+            当前量化层输出
         """
         out_all = layer(cur_inp)
         
@@ -247,24 +247,28 @@ def layer_reconstruction(model: QuantModel, fp_model: QuantModel, layer: QuantMo
             把A_l^~ 送进去，经过所有未量化的层最终拿到output
         """
         output = out_quant
-        for num, module in enumerate(module_list):
 
-            print("------num{},name_list[num]:{}".format(num, name_list[num]))
-
-            # for ResNet and RegNet
-            if name_list[num] == 'fc':
-                output = torch.flatten(output, 1)
-            # for MobileNet and MNasNet
-            if isinstance(module, torch.nn.Dropout):
-                output = output.mean([2, 3])
-
-            """
-                num2,name_list[num]:fc1
-                input: torch.Size([32, 1024, 2500])
-                <built-in function linear>
-                weight: torch.Size([512, 1024])
-            """
-            output = module(output)
+        # for num, module in enumerate(module_list):
+        #
+        #     print("------num{},name_list[num]:{}".format(num, name_list[num]))
+        #
+        #     # for ResNet and RegNet
+        #     if name_list[num] == 'fc':
+        #         output = torch.flatten(output, 1)
+        #     # for MobileNet and MNasNet
+        #     if isinstance(module, torch.nn.Dropout):
+        #         output = output.mean([2, 3])
+        #
+        #     # if name_list[num] == 'fc1':
+        #     #     output = output.view(-1, 1024)
+        #
+        #     """
+        #         num2,name_list[num]:fc1
+        #         input: torch.Size([32, 1024, 2500])
+        #         <built-in function linear>
+        #         weight: torch.Size([512, 1024])
+        #     """
+        #     output = module(output)
         """
             out_drop ： 当前量化层的输出A_l^~
             cur_out ： 当前对应FP层的输出A_l
@@ -334,6 +338,13 @@ class LossFunction:
         :param output_fp: FP模型预测
         :return: 返回损失函数
     """
+
+    """
+        pred.shape : torch.Size([32, 64, 2500])
+        tgt.shape : torch.Size([32, 64, 2500])
+        output.shape : torch.Size([32, 64, 2500])
+        output_fp.shape : torch.Size([32, 16])
+    """
     def __call__(self, pred, tgt, output, output_fp):
         """
         Compute the total loss for adaptive rounding:
@@ -355,7 +366,7 @@ class LossFunction:
             raise ValueError('Not supported reconstruction loss function: {}'.format(self.rec_loss))
 
         """根据量化模型和FP模型最后的预测计算PD loss"""
-        pd_loss = self.pd_loss(F.log_softmax(output / self.T, dim=1), F.softmax(output_fp / self.T, dim=1)) / self.lam
+        # pd_loss = self.pd_loss(F.log_softmax(output / self.T, dim=1), F.softmax(output_fp / self.T, dim=1)) / self.lam
 
         """
             
@@ -370,10 +381,11 @@ class LossFunction:
         else:
             raise NotImplementedError
 
-        total_loss = rec_loss + round_loss + pd_loss
+        # total_loss = rec_loss + round_loss + pd_loss
+        total_loss = rec_loss + round_loss
 
         """每迭代500次输出loss数值"""
         if self.count % 500 == 0:
-            print('Total loss:\t{:.3f} (rec:{:.3f}, pd:{:.3f}, round:{:.3f})\tb={:.2f}\tcount={}'.format(
-                float(total_loss), float(rec_loss), float(pd_loss), float(round_loss), b, self.count))
+            print('Total loss:\t{:.3f} (rec:{:.3f}, round:{:.3f})\tb={:.2f}\tcount={}'.format(
+                float(total_loss), float(rec_loss), float(round_loss), b, self.count))
         return total_loss
