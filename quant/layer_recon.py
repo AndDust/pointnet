@@ -58,11 +58,12 @@ def find_unquantized_module(model: torch.nn.Module, module_list: list = [], name
     这里的layer和fp_layer是传入的module和fp_module
     后面都是传入的**kwargs
 """
+# num = 0
 def layer_reconstruction(model: QuantModel, fp_model: QuantModel, layer: QuantModule, fp_layer: QuantModule,
                         cali_data: torch.Tensor,batch_size: int = 32, iters: int = 20000, weight: float = 0.001,
                         opt_mode: str = 'mse', b_range: tuple = (20, 2),
                         warmup: float = 0.0, p: float = 2.0, lr: float = 4e-5, input_prob: float = 1.0, 
-                        keep_gpu: bool = True, lamb_r: float = 0.2, T: float = 7.0, bn_lr: float = 1e-3, lamb_c=0.02):
+                        keep_gpu: bool = True, lamb_r: float = 0.2, T: float = 7.0, bn_lr: float = 1e-3, lamb_c=0.02, a_count=0):
     """
     Reconstruction to optimize the output from each layer.
 
@@ -86,7 +87,8 @@ def layer_reconstruction(model: QuantModel, fp_model: QuantModel, layer: QuantMo
     :param bn_lr: learning rate for DC
     :param lamb_c: hyper-parameter for DC
     """
-
+    # global num
+    # num += 1
     '''get input and set scale'''
 
     """
@@ -122,6 +124,14 @@ def layer_reconstruction(model: QuantModel, fp_model: QuantModel, layer: QuantMo
     """
     set_act_quantize_params(layer, cali_data=cached_inps[:min(256, cached_inps.size(0))])
 
+
+    return
+
+    # if num != a_count:
+    #     print(f"第{num}个算子，完成了激活初始化，该层不执行重构")
+    #     return
+    #
+    # print(f"第{num}个算子，该层重构！！！")
     '''set state'''
 
     cur_weight, cur_act = True, True
@@ -180,7 +190,7 @@ def layer_reconstruction(model: QuantModel, fp_model: QuantModel, layer: QuantMo
     if len(a_para) != 0:
         a_opt = torch.optim.Adam(a_para, lr=lr)
         a_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(a_opt, T_max=iters, eta_min=0.)
-    
+
     loss_mode = 'relaxation'
     rec_loss = opt_mode
 
@@ -200,7 +210,7 @@ def layer_reconstruction(model: QuantModel, fp_model: QuantModel, layer: QuantMo
         
         来优化激活比例因子以及舍入策略参数\theta
     """
-    for i in range(iters):
+    for i in range(2000):
         """
             生成一个形状为 (batch_size,) 的一维张量，其中每个元素都是从 0 到 sz 的随机整数。
             batch_size : 32
@@ -219,24 +229,20 @@ def layer_reconstruction(model: QuantModel, fp_model: QuantModel, layer: QuantMo
         cur_out = cached_outs[idx].to(device)
 
         if input_prob < 1.0:
-            """
-                生成随机张量：torch.rand_like(cur_inp) 生成一个与 cur_inp 形状相 同的随机张量。这个随机张量的每个元素都是在 [0.0, 1.0) 范围内的随机浮点数。
-                torch.where(condition, x, y) 函数根据 condition 来从 x 和 y 中选择元素。如果 condition 中的元素为 True，则选择 x 中的相应元素；否则选择y中的相应元素。
-            """
             drop_inp = torch.where(torch.rand_like(cur_inp) < input_prob, cur_inp, cur_sym)
-        
+
         cur_inp = torch.cat((drop_inp, cur_inp))
-        
+
         if w_opt:
             w_opt.zero_grad()
         if a_opt:
             a_opt.zero_grad()
 
         """
-            当前量化层输出
+            当前qnn量化层layer输出
         """
         out_all = layer(cur_inp)
-        
+
         '''forward for prediction difference'''
         out_drop = out_all[:batch_size]
         """该量化层的输出"""

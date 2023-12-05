@@ -6,8 +6,9 @@ import argparse
 import os
 import random
 import time
-# import hubconf  # noqa: F401
+import hubconf  # noqa: F401
 import copy
+
 from quant import (
     block_reconstruction,
     layer_reconstruction,
@@ -193,7 +194,7 @@ if __name__ == '__main__':
     # activation calibration parameters
     parser.add_argument('--lr', default=4e-5, type=float, help='learning rate for LSQ')
     """
-        
+
     """
     parser.add_argument('--init_wmode', default='mse', type=str, choices=['minmax', 'mse', 'minmax_scale'],
                         help='init opt mode for weight')
@@ -236,9 +237,14 @@ if __name__ == '__main__':
     parser.add_argument('--dataset_type', type=str, default='shapenet', help="dataset type shapenet|modelnet40")
     parser.add_argument('--feature_transform', action='store_true', help="use feature transform")
 
+    parser.add_argument(
+        '--setgpu', type=int, help='cuda:0?1', default=1)
+    parser.add_argument(
+        '--a_count', type=int, help='', default=1)
+
     args = parser.parse_args()
 
-    torch.cuda.set_device(1)
+    torch.cuda.set_device(args.setgpu)
     seed_all(args.seed)
 
     # build imagenet data loader
@@ -310,11 +316,12 @@ if __name__ == '__main__':
     """
 
     # TODO 加载pointnet模型
-    classifier = point_model.PointNetCls(k=num_classes, feature_transform=args.feature_transform)
-    print(classifier)
-
+    cnn = point_model.PointNetCls(k=num_classes, feature_transform=args.feature_transform)
+    args.model = "/home/nku524/dl/codebase/pointnet/utils/cls/cls_model_249.pth"
+    if args.model != '':
+        cnn.load_state_dict(torch.load(args.model))
+    print(cnn)
     # cnn = eval('hubconf.{}(pretrained=True)'.format(args.arch))
-    cnn = classifier
 
     cnn.cuda()  # 将模型移动到GPU上
     cnn.eval()  # 设置模型为评估模式
@@ -335,7 +342,7 @@ if __name__ == '__main__':
     """
         对模型结构进行量化
         is_fusing=False 不进行BN fold，关闭量化状态
-        
+
         层融合目的是将多个连续的层操作融合成一个操作，以减少计算开销和提高模型推理速度。
         这通常在量化之前进行，作为模型优化的一部分。
     """
@@ -346,7 +353,7 @@ if __name__ == '__main__':
     """fp_model只是用来对比，不需要开启量化"""
     fp_model.set_quant_state(False, False)   # 关闭量化状态
 
-    """       
+    """
        qnn是经过BN fold和开启量化状态的 （is_fusing=True）
     """
     qnn = QuantModel(model=cnn, weight_quant_params=wq_params, act_quant_params=aq_params)
@@ -365,7 +372,7 @@ if __name__ == '__main__':
     print(qnn)
 
 
-    pointnet_cali_data, pointnet_cali_target = get_train_samples(dataloader, num_samples=64)
+    pointnet_cali_data, pointnet_cali_target = get_train_samples(dataloader, num_samples=128)
 
     cali_data, cali_target = get_train_samples(train_loader, num_samples=args.num_samples)
     device = next(qnn.parameters()).device
@@ -376,25 +383,25 @@ if __name__ == '__main__':
     """
     kwargs = dict(cali_data=pointnet_cali_data, iters=args.iters_w, weight=args.weight,
                 b_range=(args.b_start, args.b_end), warmup=args.warmup, opt_mode='mse',
-                lr=args.lr, input_prob=args.input_prob, keep_gpu=not args.keep_cpu, 
-                lamb_r=args.lamb_r, T=args.T, bn_lr=args.bn_lr, lamb_c=args.lamb_c)
+                lr=args.lr, input_prob=args.input_prob, keep_gpu=not args.keep_cpu,
+                lamb_r=args.lamb_r, T=args.T, bn_lr=args.bn_lr, lamb_c=args.lamb_c, a_count = args.a_count)
 
 
-    ''' 
-        init weight quantizer
-        
-        初始化权重量化器，对于每个module中的权重计算出scale和zero_point，后续每个权重数值都学习一个 \theta  
-        
-        遍历每一个module，针对每一个module，如果是QuantModule,
-        1. 开始初始化权重量化器： module.weight_quantizer.set_inited(False)
-        2. 遍历每一个module,则用每个module的weight_quantizer计算一个scale和zero_point
-            module.weight_quantizer(module.weight)，
-            对于如果是QuantModule的weight_quantizer，后续传入数据到就会得到量化结果
-        3. 设置量化初始化为完成： module.weight_quantizer.set_inited(True)
-        
-        计算出最优的min和max，然后根据min和max计算出S和zero_point
-        然后根据计算出来的S和zero_point对每个module的权重进行量化和反量化操作
     '''
+    #     init weight quantizer
+    #
+    #     初始化权重量化器，对于每个module中的权重计算出scale和zero_point，后续每个权重数值都学习一个 \theta
+    #
+    #     遍历每一个module，针对每一个module，如果是QuantModule,
+    #     1. 开始初始化权重量化器： module.weight_quantizer.set_inited(False)
+    #     2. 遍历每一个module,则用每个module的weight_quantizer计算一个scale和zero_point
+    #         module.weight_quantizer(module.weight)，
+    #         对于如果是QuantModule的weight_quantizer，后续传入数据到就会得到量化结果
+    #     3. 设置量化初始化为完成： module.weight_quantizer.set_inited(True)
+    #
+    #     计算出最优的min和max，然后根据min和max计算出S和zero_point
+    #     然后根据计算出来的S和zero_point对每个module的权重进行量化和反量化操作
+    # '''
 
     set_weight_quantize_params(qnn)
 
@@ -424,6 +431,7 @@ if __name__ == '__main__':
     """
         区块重建。对于第一层和最后一层，我们只能应用层重建。
     """
+    # a_count = 0
     def recon_model(model: nn.Module, fp_model: nn.Module):
         """
             Block reconstruction. For the first and last layers, we can only apply layer reconstruction.
@@ -462,7 +470,10 @@ if __name__ == '__main__':
         target = target[:, 0]
         points = points.transpose(2, 1)
         points, target = points.cuda(), target.cuda()
+        # qnn = qnn.eval()
+        # fp_model = fp_model.eval()
         qnn = qnn.eval()
+        # pred, _, _ = fp_model(points)
         pred, _, _ = qnn(points)
         pred_choice = pred.data.max(1)[1]
         correct = pred_choice.eq(target.data).cpu().sum()

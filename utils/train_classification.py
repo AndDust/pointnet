@@ -90,50 +90,51 @@ except OSError:
 
 classifier = PointNetCls(k=num_classes, feature_transform=opt.feature_transform)
 print(classifier)
+opt.model = "/home/nku524/dl/codebase/pointnet/utils/cls/cls_model_249.pth"
 
 if opt.model != '':
     classifier.load_state_dict(torch.load(opt.model))
 
-
-optimizer = optim.Adam(classifier.parameters(), lr=0.001, betas=(0.9, 0.999))
-scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
+#
+# optimizer = optim.Adam(classifier.parameters(), lr=0.001, betas=(0.9, 0.999))
+# scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
 classifier.cuda()
-
-num_batch = len(dataset) / opt.batchSize
-
-for epoch in range(opt.nepoch):
-    scheduler.step()
-    for i, data in enumerate(dataloader, 0):
-        points, target = data
-        target = target[:, 0]
-        points = points.transpose(2, 1)
-        points, target = points.cuda(), target.cuda()
-        optimizer.zero_grad()
-        classifier = classifier.train()
-        pred, trans, trans_feat = classifier(points)
-        loss = F.nll_loss(pred, target)
-        if opt.feature_transform:
-            loss += feature_transform_regularizer(trans_feat) * 0.001
-        loss.backward()
-        optimizer.step()
-        pred_choice = pred.data.max(1)[1]
-        correct = pred_choice.eq(target.data).cpu().sum()
-        print('[%d: %d/%d] train loss: %f accuracy: %f' % (epoch, i, num_batch, loss.item(), correct.item() / float(opt.batchSize)))
-
-        if i % 10 == 0:
-            j, data = next(enumerate(testdataloader, 0))
-            points, target = data
-            target = target[:, 0]
-            points = points.transpose(2, 1)
-            points, target = points.cuda(), target.cuda()
-            classifier = classifier.eval()
-            pred, _, _ = classifier(points)
-            loss = F.nll_loss(pred, target)
-            pred_choice = pred.data.max(1)[1]
-            correct = pred_choice.eq(target.data).cpu().sum()
-            print('[%d: %d/%d] %s loss: %f accuracy: %f' % (epoch, i, num_batch, blue('test'), loss.item(), correct.item()/float(opt.batchSize)))
-
-    torch.save(classifier.state_dict(), '%s/cls_model_%d.pth' % (opt.outf, epoch))
+#
+# num_batch = len(dataset) / opt.batchSize
+#
+# for epoch in range(opt.nepoch):
+#     scheduler.step()
+#     for i, data in enumerate(dataloader, 0):
+#         points, target = data
+#         target = target[:, 0]
+#         points = points.transpose(2, 1)
+#         points, target = points.cuda(), target.cuda()
+#         optimizer.zero_grad()
+#         classifier = classifier.train()
+#         pred, trans, trans_feat = classifier(points)
+#         loss = F.nll_loss(pred, target)
+#         if opt.feature_transform:
+#             loss += feature_transform_regularizer(trans_feat) * 0.001
+#         loss.backward()
+#         optimizer.step()
+#         pred_choice = pred.data.max(1)[1]
+#         correct = pred_choice.eq(target.data).cpu().sum()
+#         print('[%d: %d/%d] train loss: %f accuracy: %f' % (epoch, i, num_batch, loss.item(), correct.item() / float(opt.batchSize)))
+#
+#         if i % 10 == 0:
+#             j, data = next(enumerate(testdataloader, 0))
+#             points, target = data
+#             target = target[:, 0]
+#             points = points.transpose(2, 1)
+#             points, target = points.cuda(), target.cuda()
+#             classifier = classifier.eval()
+#             pred, _, _ = classifier(points)
+#             loss = F.nll_loss(pred, target)
+#             pred_choice = pred.data.max(1)[1]
+#             correct = pred_choice.eq(target.data).cpu().sum()
+#             print('[%d: %d/%d] %s loss: %f accuracy: %f' % (epoch, i, num_batch, blue('test'), loss.item(), correct.item()/float(opt.batchSize)))
+#
+#     torch.save(classifier.state_dict(), '%s/cls_model_%d.pth' % (opt.outf, epoch))
 
 total_correct = 0
 total_testset = 0
