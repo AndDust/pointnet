@@ -8,6 +8,7 @@ import random
 import time
 import hubconf  # noqa: F401
 import copy
+import datetime
 
 from quant import (
     block_reconstruction,
@@ -238,13 +239,18 @@ if __name__ == '__main__':
     parser.add_argument('--feature_transform', action='store_true', help="use feature transform")
 
     parser.add_argument(
-        '--setgpu', type=int, help='cuda:0?1', default=1)
+        '--setgpu', type=int, help='cuda:0?1', default=0)
     parser.add_argument(
         '--a_count', type=int, help='', default=1)
+    parser.add_argument(
+        '--record', type=str, help='', default="")
+    parser.add_argument(
+        '--pointnet_num_samples', type=int, help='', default=32)
 
     args = parser.parse_args()
 
     torch.cuda.set_device(args.setgpu)
+
     seed_all(args.seed)
 
     # build imagenet data loader
@@ -372,7 +378,7 @@ if __name__ == '__main__':
     print(qnn)
 
 
-    pointnet_cali_data, pointnet_cali_target = get_train_samples(dataloader, num_samples=128)
+    pointnet_cali_data, pointnet_cali_target = get_train_samples(dataloader, num_samples=args.pointnet_num_samples)
 
     cali_data, cali_target = get_train_samples(train_loader, num_samples=args.num_samples)
     device = next(qnn.parameters()).device
@@ -452,7 +458,7 @@ if __name__ == '__main__':
     """
     # Start calibration
     recon_model(qnn, fp_model)
-
+    #
     """qnn设置量化状态为True"""
     qnn.set_quant_state(weight_quant=True, act_quant=True)
 
@@ -481,6 +487,16 @@ if __name__ == '__main__':
         total_testset += points.size()[0]
 
     print("Pointnet after quantization (W{}A{}) final accuracy {}".format(args.n_bits_w, args.n_bits_a, total_correct / float(total_testset)))
+
+    # # 获取当前时间
+    # current_time = datetime.datetime.now()
+    # # 将时间转化为字符串
+    # time_str = current_time.strftime("%Y-%m-%d %H:%M:%S")
+    # record_str = "num_samples{} Pointnet after quantization (W{}A{}) final accuracy {}".format(args.pointnet_num_samples, args.n_bits_w, args.n_bits_a, total_correct / float(total_testset)) + "  ***  " + time_str + "\n"
+    # with open(args.record, 'a', encoding='utf-8') as file:
+    #     # 写入数据到文件
+    #     file.write(record_str)
+    # print("数据已成功写入到文件")
 
 if __name__ == '__main__':
     pass

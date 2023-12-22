@@ -1,3 +1,4 @@
+
 import torch
 import torch.nn.functional as F
 from .quant_layer import QuantModule, lp_loss
@@ -58,7 +59,7 @@ def find_unquantized_module(model: torch.nn.Module, module_list: list = [], name
     这里的layer和fp_layer是传入的module和fp_module
     后面都是传入的**kwargs
 """
-# num = 0
+num = 0
 def layer_reconstruction(model: QuantModel, fp_model: QuantModel, layer: QuantModule, fp_layer: QuantModule,
                         cali_data: torch.Tensor,batch_size: int = 32, iters: int = 20000, weight: float = 0.001,
                         opt_mode: str = 'mse', b_range: tuple = (20, 2),
@@ -124,15 +125,14 @@ def layer_reconstruction(model: QuantModel, fp_model: QuantModel, layer: QuantMo
     """
     set_act_quantize_params(layer, cali_data=cached_inps[:min(256, cached_inps.size(0))])
 
-
-    return
+    # return
 
     # if num != a_count:
     #     print(f"第{num}个算子，完成了激活初始化，该层不执行重构")
     #     return
-    #
+
     # print(f"第{num}个算子，该层重构！！！")
-    '''set state'''
+    # '''set state'''
 
     cur_weight, cur_act = True, True
 
@@ -391,7 +391,7 @@ class LossFunction:
         total_loss = rec_loss + round_loss
 
         """每迭代500次输出loss数值"""
-        if self.count % 500 == 0:
+        if self.count % 50 == 0:
             print('Total loss:\t{:.3f} (rec:{:.3f}, round:{:.3f})\tb={:.2f}\tcount={}'.format(
                 float(total_loss), float(rec_loss), float(round_loss), b, self.count))
         return total_loss

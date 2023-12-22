@@ -171,9 +171,17 @@ class PointNetCls(nn.Module):
     def forward(self, x):
         x, trans, trans_feat = self.feat(x)
         x = self.relu1(self.bn1(self.fc1(x)))
-        x = self.relu2(self.bn2(self.fc2(x)))
+        x = self.fc2(x)
+        # x = self.dropout(x)
+        x = self.bn2(x)
+        x = self.relu2(x)
         x = self.fc3(x)
         return F.log_softmax(x, dim=1), trans, trans_feat
+        # x, trans, trans_feat = self.feat(x)
+        # x = self.relu1(self.bn1(self.fc1(x)))
+        # x = self.relu2(self.bn2(self.dropout(self.fc2(x))))
+        # x = self.fc3(x)
+        # return F.log_softmax(x, dim=1), trans, trans_feat
 
 class PointNetDenseCls(nn.Module):
     def __init__(self, k = 2, feature_transform=False):
