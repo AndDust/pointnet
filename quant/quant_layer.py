@@ -162,14 +162,14 @@ class UniformAffineQuantizer(nn.Module):
         delta = None
         zero_point = None
         if self.is_act:
-            new_shape = [1] * len(x.shape)
-            new_shape[1] = x.shape[1]
-            if isinstance(self.delta, torch.Tensor):
-                delta = self.delta.reshape(new_shape)
-                zero_point = self.zero_point.reshape(new_shape)
-            else:
-                delta = self.delta
-                zero_point = self.zero_point
+            # new_shape = [1] * len(x.shape)
+            # new_shape[1] = x.shape[1]
+            # if isinstance(self.delta, torch.Tensor):
+            #     delta = self.delta.reshape(new_shape)
+            #     zero_point = self.zero_point.reshape(new_shape)
+            # else:
+            delta = self.delta
+            zero_point = self.zero_point
             # if self.channel_wise:
             #     # determine the scale and zero point channel-by-channel 逐个通道确定scale和zero point
             #
@@ -466,16 +466,19 @@ class UniformAffineQuantizer(nn.Module):
 
         #TODO 实现计算范围的两个值
         std = torch.sqrt(var)
-        lower_bound = mean - 5 * std
-        upper_bound = mean + 5 * std
+        lower_bound = mean - 3 * std
+        upper_bound = mean + 3 * std
+
+        lower = torch.min(lower_bound)
+        upper = torch.max(upper_bound)
         print("___________________")
         print("lower_bound: \n")
-        print(lower_bound)
+        print(lower)
         print("upper_bound: \n")
-        print(upper_bound)
+        print(upper)
         print("+++++++++++++++++++")
 
-        return lower_bound, upper_bound
+        return lower, upper
 
     def my_init_quantization_scale(self, mean, var, channel_wise: bool = False):
         """按通道量化"""
