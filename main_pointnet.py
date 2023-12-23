@@ -9,6 +9,7 @@ import time
 import hubconf  # noqa: F401
 import copy
 import datetime
+import os
 
 from quant import (
     block_reconstruction,
@@ -30,6 +31,7 @@ from pointnet.model import PointNetCls, feature_transform_regularizer
 import torch.nn.functional as F
 from tqdm import tqdm
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 def seed_all(seed=1029):
     random.seed(seed)
@@ -171,9 +173,9 @@ if __name__ == '__main__':
         n_bits_a ： 激活量化位宽
         channel_wise ： 权重是否按通道量化，默认为True
     """
-    parser.add_argument('--n_bits_w', default=4, type=int, help='bitwidth for weight quantization')
+    parser.add_argument('--n_bits_w', default=8, type=int, help='bitwidth for weight quantization')
     parser.add_argument('--channel_wise', default=True, help='apply channel_wise quantization for weights')
-    parser.add_argument('--n_bits_a', default=4, type=int, help='bitwidth for activation quantization')
+    parser.add_argument('--n_bits_a', default=8, type=int, help='bitwidth for activation quantization')
     parser.add_argument('--disable_8bit_head_stem', action='store_true')
 
     """权重校准参数"""
@@ -249,7 +251,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    torch.cuda.set_device(args.setgpu)
+    torch.cuda.set_device(0)
 
     seed_all(args.seed)
 
@@ -323,14 +325,15 @@ if __name__ == '__main__':
 
     # TODO 加载pointnet模型
     cnn = point_model.PointNetCls(k=num_classes, feature_transform=args.feature_transform)
+    cnn.cuda()  # 将模型移动到GPU上
+    cnn.eval()  # 设置模型为评估模式
     args.model = "/home/nku524/dl/codebase/pointnet/utils/cls/cls_model_249.pth"
     if args.model != '':
-        cnn.load_state_dict(torch.load(args.model))
+        cnn.load_state_dict(torch.load(args.model, map_location=torch.device('cuda:0')))
     print(cnn)
     # cnn = eval('hubconf.{}(pretrained=True)'.format(args.arch))
 
-    cnn.cuda()  # 将模型移动到GPU上
-    cnn.eval()  # 设置模型为评估模式
+
 
     fp_model = copy.deepcopy(cnn)   # 深度复制模型
     fp_model.cuda()   # 将复制的模型移动到GPU上

@@ -6,7 +6,7 @@ from .quant_model import QuantModel
 from .block_recon import LinearTempDecay
 from .adaptive_rounding import AdaRoundQuantizer
 from .set_weight_quantize_params import get_init, get_dc_fp_init
-from .set_act_quantize_params import set_act_quantize_params
+from .set_act_quantize_params import set_act_quantize_params, my_set_act_quantize_params
 from .quant_block import BaseQuantBlock, specials_unquantized
 
 
@@ -97,25 +97,25 @@ def layer_reconstruction(model: QuantModel, fp_model: QuantModel, layer: QuantMo
         得到输入qnn该layer的inputs  cached_inps.shape : torch.Size([1024, 3, 224, 224])
         cached_inps ： \hat{A_{l-1}} 相当于去取论文中图3中的A_{l-1}^{FP}
     """
-    cali_data = cali_data.transpose(1, 2)
-
-    cached_inps = get_init(model, layer, cali_data, batch_size=batch_size,
-                                        input_prob=True, keep_gpu=keep_gpu)
-
-    """
-        这一步输入fp_model和fp_layer
-        Start correcting 32 batches of data!
-        
-        cached_outs.shape : torch.Size([1024, 64, 112, 112])
-        cached_output.shape : torch.Size([1024, 1000])
-        cur_syms.shape : torch.Size( [1024, 3, 224, 224])
-        
-        cached_outs : FP模型当前layer的输出 A_l
-        cached_output : FP模型最终的输出
-        cur_syms : A_{l-1}^{DC} (数据做了DC校准之后的数据)
-    """
-    cached_outs, cached_output, cur_syms = get_dc_fp_init(fp_model, fp_layer, cali_data, batch_size=batch_size,
-                                        input_prob=True, keep_gpu=keep_gpu, bn_lr=bn_lr, lamb=lamb_c)
+    # cali_data = cali_data.transpose(1, 2)
+    #
+    # cached_inps = get_init(model, layer, cali_data, batch_size=batch_size,
+    #                                     input_prob=True, keep_gpu=keep_gpu)
+    #
+    # """
+    #     这一步输入fp_model和fp_layer
+    #     Start correcting 32 batches of data!
+    #
+    #     cached_outs.shape : torch.Size([1024, 64, 112, 112])
+    #     cached_output.shape : torch.Size([1024, 1000])
+    #     cur_syms.shape : torch.Size( [1024, 3, 224, 224])
+    #
+    #     cached_outs : FP模型当前layer的输出 A_l
+    #     cached_output : FP模型最终的输出
+    #     cur_syms : A_{l-1}^{DC} (数据做了DC校准之后的数据)
+    # """
+    # cached_outs, cached_output, cur_syms = get_dc_fp_init(fp_model, fp_layer, cali_data, batch_size=batch_size,
+    #                                     input_prob=True, keep_gpu=keep_gpu, bn_lr=bn_lr, lamb=lamb_c)
 
     """
         cached_inps.size(0) ： 1024
@@ -123,7 +123,7 @@ def layer_reconstruction(model: QuantModel, fp_model: QuantModel, layer: QuantMo
         
         把这个输入送入这个layer，利用校准数据集，对于激活去初始化得到一个scale
     """
-    set_act_quantize_params(layer, cali_data=cached_inps[:min(256, cached_inps.size(0))])
+    # set_act_quantize_params(layer, cali_data=cached_inps[:min(256, cached_inps.size(0))])
 
     # return
 
@@ -134,6 +134,28 @@ def layer_reconstruction(model: QuantModel, fp_model: QuantModel, layer: QuantMo
     # print(f"第{num}个算子，该层重构！！！")
     # '''set state'''
 
+    """
+        新的实现
+    """
+    if hasattr(layer, 'bn_weight'):
+        gamma = layer.bn_weight
+        beta = layer.bn_bias
+
+        mean = beta
+        var = torch.pow(gamma, 2)
+        my_set_act_quantize_params(layer, mean, var)
+
+    """
+        后面的代码移到前面来
+    """
+    layer.weight_quantizer.soft_targets = False
+    layer.act_quantizer.is_training = False
+    """
+        标识位，当前层做完量化了，后续就会跳过
+    """
+    layer.trained = True
+
+    return
     cur_weight, cur_act = True, True
 
     """

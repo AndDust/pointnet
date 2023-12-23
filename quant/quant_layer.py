@@ -86,6 +86,8 @@ class UniformAffineQuantizer(nn.Module):
         self.zero_point = 0.0
         self.inited = True
 
+        self.is_act = False
+
         '''if leaf_param, use EMA to set scale '''
         self.leaf_param = leaf_param
 
@@ -157,12 +159,39 @@ class UniformAffineQuantizer(nn.Module):
             x_quant[0][0][0] : tensor([ 95.,  99., 100.,  85.,  81.,  66.,  72.],
             x_dequant[0][0][0] : tensor([ 0.0071,  0.0090,  0.0095,  0.0024,  0.0005, -0.0067, -0.0038],
         """
-        x_int = round_ste(x / self.delta) + self.zero_point
+        delta = None
+        zero_point = None
+        if self.is_act:
+            new_shape = [1] * len(x.shape)
+            new_shape[1] = x.shape[1]
+            if isinstance(self.delta, torch.Tensor):
+                delta = self.delta.reshape(new_shape)
+                zero_point = self.zero_point.reshape(new_shape)
+            else:
+                delta = self.delta
+                zero_point = self.zero_point
+            # if self.channel_wise:
+            #     # determine the scale and zero point channel-by-channel 逐个通道确定scale和zero point
+            #
+            #     new_shape = [1] * len(x.shape)
+            #     new_shape[0] = x.shape[0]
+            #     delta = self.delta.reshape(new_shape)
+            #     zero_point = self.zero_point.reshape(new_shape)
+            #
+            #     """不按通道量化"""
+            # else:
+            #     delta = self.delta
+            #     zero_point = self.zero_point
+        else:
+            delta = self.delta
+            zero_point = self.zero_point
+
+        x_int = round_ste(x / delta) + zero_point
         x_quant = torch.clamp(x_int, 0, self.n_levels - 1)
         """
             反量化
         """
-        x_dequant = (x_quant - self.zero_point) * self.delta
+        x_dequant = (x_quant - zero_point) * delta
         """"""
         if self.is_training and self.prob < 1.0:
             """训练过程，并有丢弃"""
@@ -428,6 +457,41 @@ class UniformAffineQuantizer(nn.Module):
             delta, zero_point = self.init_quantization_scale_channel(x_clone)
         return delta, zero_point
 
+    def my_init_quantization_scale_channel(self, mean, var):
+        """使用mse方法来确定动态范围"""
+        x_min, x_max = self.my_get_x_min_x_max(mean, var)
+        return self.calculate_qparams(x_min, x_max)
+
+    def my_get_x_min_x_max(self, mean, var):
+
+        #TODO 实现计算范围的两个值
+        std = torch.sqrt(var)
+        lower_bound = mean - 5 * std
+        upper_bound = mean + 5 * std
+        print("___________________")
+        print("lower_bound: \n")
+        print(lower_bound)
+        print("upper_bound: \n")
+        print(upper_bound)
+        print("+++++++++++++++++++")
+
+        return lower_bound, upper_bound
+
+    def my_init_quantization_scale(self, mean, var, channel_wise: bool = False):
+        """按通道量化"""
+        if channel_wise:
+            # determine the scale and zero point channel-by-channel 逐个通道确定scale和zero point
+            delta, zero_point = self.my_init_quantization_scale_channel(mean, var)
+            # new_shape = [1] * len(mean.shape)
+            # new_shape[0] = mean.shape[0]
+            # delta = delta.reshape(new_shape)
+            # zero_point = zero_point.reshape(new_shape)
+
+            """不按通道量化"""
+        else:
+            delta, zero_point = self.my_init_quantization_scale_channel(mean, var)
+        return delta, zero_point
+
     def bitwidth_refactor(self, refactored_bit: int):
         assert 2 <= refactored_bit <= 8, 'bitwidth not supported'
         self.n_bits = refactored_bit
@@ -495,6 +559,11 @@ class QuantModule(nn.Module):
             self.bias = None
             self.org_bias = None
 
+        if hasattr(org_module, 'bn_weight'):
+            self.bn_weight = org_module.bn_weight
+        if hasattr(org_module, 'bn_bias'):
+            self.bn_bias = org_module.bn_bias
+
         """停用量化前向传播默认值"""
         # de-activate the quantized forward default
         self.use_weight_quant = False
@@ -504,6 +573,7 @@ class QuantModule(nn.Module):
         # initialize quantizer
         self.weight_quantizer = UniformAffineQuantizer(**weight_quant_params)
         self.act_quantizer = UniformAffineQuantizer(**act_quant_params)
+        self.act_quantizer.is_act = True
 
         self.norm_function = StraightThrough()
         self.activation_function = StraightThrough()
