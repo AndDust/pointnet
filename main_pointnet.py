@@ -325,7 +325,7 @@ if __name__ == '__main__':
     cnn = point_model.PointNetCls(k=num_classes, feature_transform=args.feature_transform)
     args.model = "/home/nku524/dl/codebase/pointnet/utils/cls/cls_model_249.pth"
     if args.model != '':
-        cnn.load_state_dict(torch.load(args.model))
+        cnn.load_state_dict(torch.load(args.model, map_location=torch.device('cuda:0')))
     print(cnn)
     # cnn = eval('hubconf.{}(pretrained=True)'.format(args.arch))
 
