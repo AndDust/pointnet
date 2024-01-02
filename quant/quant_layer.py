@@ -478,6 +478,7 @@ class UniformAffineQuantizer(nn.Module):
         print(upper)
         print("+++++++++++++++++++")
 
+        # return torch.tensor(-50), torch.tensor(50)
         return lower, upper
 
     def my_init_quantization_scale(self, mean, var, channel_wise: bool = False):

@@ -165,7 +165,7 @@ if __name__ == '__main__':
     """
         数据集路径
     """
-    parser.add_argument('--data_path', default='/home/nku524/dl/dataset/imageNet-1k', type=str, help='path to ImageNet data')
+    # parser.add_argument('--data_path', default='/home/nku524/dl/dataset/imageNet-1k', type=str, help='path to ImageNet data')
     # quantization parameters
     """
         量化参数
@@ -256,8 +256,8 @@ if __name__ == '__main__':
     seed_all(args.seed)
 
     # build imagenet data loader
-    train_loader, test_loader = build_imagenet_data(batch_size=args.batch_size, workers=args.workers,
-                                                    data_path=args.data_path)
+    # train_loader, test_loader = build_imagenet_data(batch_size=args.batch_size, workers=args.workers,
+    #                                                 data_path=args.data_path)
 
     #TODO pointnet 数据集 准备
 
@@ -374,6 +374,7 @@ if __name__ == '__main__':
         qnn.set_first_last_layer_to_8bit()
 
     """禁用神经网络中最后一个量化模块（QuantModule）的激活量化。"""
+    """新增： 禁用了fc3的激活量化"""
     qnn.disable_network_output_quantization()
 
     """得到量化后的模型"""
@@ -383,7 +384,7 @@ if __name__ == '__main__':
 
     pointnet_cali_data, pointnet_cali_target = get_train_samples(dataloader, num_samples=args.pointnet_num_samples)
 
-    cali_data, cali_target = get_train_samples(train_loader, num_samples=args.num_samples)
+    # cali_data, cali_target = get_train_samples(train_loader, num_samples=args.num_samples)
     device = next(qnn.parameters()).device
 
     # Kwargs for weight rounding calibration
