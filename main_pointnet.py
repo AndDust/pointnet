@@ -380,7 +380,7 @@ if __name__ == '__main__':
 
     pointnet_cali_data, pointnet_cali_target = get_train_samples(dataloader, num_samples=args.pointnet_num_samples)
 
-    cali_data, cali_target = get_train_samples(train_loader, num_samples=args.num_samples)
+    # cali_data, cali_target = get_train_samples(train_loader, num_samples=args.num_samples)
     device = next(qnn.parameters()).device
 
     # Kwargs for weight rounding calibration
