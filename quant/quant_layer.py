@@ -563,12 +563,15 @@ class QuantModule(nn.Module):
 
         # disable act quantization is designed for convolution before elemental-wise operation,
         # in that case, we apply activation function and quantization after ele-wise op.
-        out = self.norm_function(out)
         if self.act_quantizer.inited == False:
             print("+++++++++++$$$$$$+++++++++++")
-            print("该层的最大值：{}".format(torch.max(out)))
-            print("该层的最小值：{}".format(torch.min(out)))
+            print("该conv层的最大值：{}".format(torch.max(out)))
+            print("该conv层的最小值：{}".format(torch.min(out)))
             print("-----------$$$$$$-----------")
+
+
+
+        out = self.norm_function(out)
         out = self.activation_function(out)
         if self.disable_act_quant:
             return out
