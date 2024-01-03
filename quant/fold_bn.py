@@ -102,6 +102,8 @@ def search_fold_and_remove_bn(model):
             """
             prev.bn_weight = m.weight
             prev.bn_bias = m.bias
+            prev.running_mean = m.running_mean
+            prev.running_var = m.running_var
             # set the bn module to straight through
             """
                 原BN层会被替换为一个直通（Straight Through）层，

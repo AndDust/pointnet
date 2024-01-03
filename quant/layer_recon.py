@@ -140,6 +140,16 @@ def layer_reconstruction(model: QuantModel, fp_model: QuantModel, layer: QuantMo
     if hasattr(layer, 'bn_weight'):
         gamma = layer.bn_weight
         beta = layer.bn_bias
+        running_mean = layer.running_mean
+        running_var = layer.running_var
+
+        low = running_mean -3 *running_var
+        up = running_mean +3 *running_var
+
+        print("+++++++++++$$$$$$+++++++++++")
+        print("最大值：{}".format(torch.max(up)))
+        print("最小值：{}".format(torch.min(low)))
+        print("-----------$$$$$$-----------")
 
         mean = beta
         var = torch.pow(gamma, 2)

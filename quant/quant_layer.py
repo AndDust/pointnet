@@ -567,6 +567,11 @@ class QuantModule(nn.Module):
             self.bn_weight = org_module.bn_weight
         if hasattr(org_module, 'bn_bias'):
             self.bn_bias = org_module.bn_bias
+        if hasattr(org_module, 'running_mean'):
+            self.running_mean = org_module.running_mean
+        if hasattr(org_module, 'running_var'):
+            self.running_var = org_module.running_var
+
 
         """停用量化前向传播默认值"""
         # de-activate the quantized forward default
