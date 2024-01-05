@@ -97,6 +97,14 @@ def search_fold_and_remove_bn(model):
         if is_bn(m) and is_absorbing(prev):
             """进行BN折叠"""
             fold_bn_into_conv(prev, m)
+            """
+            直接给conv层或linear层增加两个属性来存储BN层的weight和bias
+            """
+            prev.bn_weight = m.weight
+            prev.bn_bias = m.bias
+            prev.running_mean = m.running_mean
+            prev.running_var = m.running_var
+
             # set the bn module to straight through
             """
                 原BN层会被替换为一个直通（Straight Through）层，
