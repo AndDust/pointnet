@@ -109,6 +109,8 @@ class UniformAffineQuantizer(nn.Module):
         self.prob = prob
         self.is_training = False
 
+        self.is_act = False
+
     def set_inited(self, inited: bool = True):  # inited manually
         self.inited = inited
 
@@ -136,27 +138,6 @@ class UniformAffineQuantizer(nn.Module):
                 self.delta, self.zero_point = self.init_quantization_scale(x.clone().detach(), self.channel_wise)
 
         # start quantization
-        """
-            执行量化
-            x.shape : torch.Size([64, 64, 3, 3])
-                x[0][0][0] : tensor([-0.0333, -0.1145, -0.0190]
-            
-            self.delta.shape : torch.Size([64, 1, 1, 1])
-                self.delta[0] : tensor([[[0.0551]]]
-                
-            self.zero_point.shape : torch.Size([64, 1, 1, 1])
-                self.zero_point[0][0][0] : tensor([7.]
-                
-            x_int.shape : torch.Size([64, 64, 3, 3])
-                x_int[0][0][0] : tensor([6., 5., 7.]
-                
-            x_quant.shape : torch.Size([64, 64, 3, 3])
-                x_quant[0][0][0] : tensor([6., 5., 7.]
-                
-            x_int[0][0][0] : tensor([ 95.,  99., 100.,  85.,  81.,  66.,  72.]
-            x_quant[0][0][0] : tensor([ 95.,  99., 100.,  85.,  81.,  66.,  72.],
-            x_dequant[0][0][0] : tensor([ 0.0071,  0.0090,  0.0095,  0.0024,  0.0005, -0.0067, -0.0038],
-        """
         x_int = round_ste(x / self.delta) + self.zero_point
         x_quant = torch.clamp(x_int, 0, self.n_levels - 1)
         """
@@ -504,6 +485,7 @@ class QuantModule(nn.Module):
         # initialize quantizer
         self.weight_quantizer = UniformAffineQuantizer(**weight_quant_params)
         self.act_quantizer = UniformAffineQuantizer(**act_quant_params)
+        self.act_quantizer.is_act = True
 
         self.norm_function = StraightThrough()
         self.activation_function = StraightThrough()
@@ -564,13 +546,11 @@ class QuantModule(nn.Module):
         # disable act quantization is designed for convolution before elemental-wise operation,
         # in that case, we apply activation function and quantization after ele-wise op.
         if self.act_quantizer.inited == False:
+            print(input.shape)
             print("+++++++++++$$$$$$+++++++++++")
             print("该conv层的最大值：{}".format(torch.max(out)))
             print("该conv层的最小值：{}".format(torch.min(out)))
             print("-----------$$$$$$-----------")
-
-
-
         out = self.norm_function(out)
         out = self.activation_function(out)
         if self.disable_act_quant:
