@@ -392,7 +392,6 @@ class UniformAffineQuantizer(nn.Module):
     """
         初始化量化比例
         x_clone.shape : torch.Size([64, 3, 7, 7])
-        
     """
     def init_quantization_scale(self, x_clone: torch.Tensor, channel_wise: bool = False):
         """按通道量化"""
@@ -476,6 +475,15 @@ class QuantModule(nn.Module):
             self.bias = None
             self.org_bias = None
 
+        if hasattr(org_module, 'bn_weight'):
+            self.bn_weight = org_module.bn_weight
+        if hasattr(org_module, 'bn_bias'):
+            self.bn_bias = org_module.bn_bias
+        if hasattr(org_module, 'running_mean'):
+            self.running_mean = org_module.running_mean
+        if hasattr(org_module, 'running_var'):
+            self.running_var = org_module.running_var
+
         """停用量化前向传播默认值"""
         # de-activate the quantized forward default
         self.use_weight_quant = False
@@ -546,11 +554,19 @@ class QuantModule(nn.Module):
         # disable act quantization is designed for convolution before elemental-wise operation,
         # in that case, we apply activation function and quantization after ele-wise op.
         if self.act_quantizer.inited == False:
+            mean = self.bn_bias
+            var = self.bn_weight ** 2
+
             print(input.shape)
             print("+++++++++++$$$$$$+++++++++++")
-            print("该conv层的最大值：{}".format(torch.max(out)))
-            print("该conv层的最小值：{}".format(torch.min(out)))
+            print("该conv+BN层输出的实际最大值：{}".format(torch.max(out, 1)))
+            print("该conv+BN层输出的实际最小值：{}".format(torch.min(out, 1)))
+
+            print("conv+BN输出的估计最小值：{}".format(mean - 3 * var))
+            print("conv+BN输出的估计最大值：{}".format(mean + 3 * var))
             print("-----------$$$$$$-----------")
+
+
         out = self.norm_function(out)
         out = self.activation_function(out)
         if self.disable_act_quant:
