@@ -256,8 +256,8 @@ if __name__ == '__main__':
     seed_all(args.seed)
 
     # build imagenet data loader
-    train_loader, test_loader = build_imagenet_data(batch_size=args.batch_size, workers=args.workers,
-                                                    data_path=args.data_path)
+    # train_loader, test_loader = build_imagenet_data(batch_size=args.batch_size, workers=args.workers,
+    #                                                 data_path=args.data_path)
 
     #TODO pointnet 数据集 准备
 
@@ -383,7 +383,7 @@ if __name__ == '__main__':
 
     pointnet_cali_data, pointnet_cali_target = get_train_samples(dataloader, num_samples=args.pointnet_num_samples)
 
-    cali_data, cali_target = get_train_samples(train_loader, num_samples=args.num_samples)
+    # cali_data, cali_target = get_train_samples(train_loader, num_samples=args.num_samples)
     device = next(qnn.parameters()).device
 
     # Kwargs for weight rounding calibration
