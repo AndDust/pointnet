@@ -2,6 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from typing import Union
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 """
     直通
@@ -545,27 +548,62 @@ class QuantModule(nn.Module):
 
         out = self.fwd_func(input, weight, bias, **self.fwd_kwargs)
 
-        """
-            出错：
-            input : torch.Size([32, 1024, 2500])
-            weight : torch.Size([512, 1024])
-        """
-
         # disable act quantization is designed for convolution before elemental-wise operation,
         # in that case, we apply activation function and quantization after ele-wise op.
-        if self.act_quantizer.inited == False:
-            mean = self.bn_bias
-            var = self.bn_weight ** 2
+        # if self.act_quantizer.inited == False:
+        #     mean = self.norm_function.running_mean
+        #     var = self.norm_function.running_var
+        #     beta = self.norm_function.weight
+        #     gamma = self.norm_function.bias
+        #
+        #     print("+++++++++++$$$$$$+++++++++++")
 
-            print(input.shape)
-            print("+++++++++++$$$$$$+++++++++++")
-            print("该conv+BN层输出的实际最大值：{}".format(torch.max(out, 1)))
-            print("该conv+BN层输出的实际最小值：{}".format(torch.min(out, 1)))
+            # C = out.shape[1]
+            #
+            # op = out.permute(0, 2, 1)
+            # op = op.reshape(-1, C)
+             # print("实际的均值:{}".format(torch.mean(op, dim=0)))
+            # print("实际的方差：{}".format(torch.var(op, dim=0)))
+            #
+            # print("存储的均值:{}".format(mean))
+            # print("存储的方差：{}".format(var))
+            #
+            # diff_mean = torch.mean(op, dim=0) - mean
+            # diff_var = torch.var(op, dim=0) - var
+            #
+            # print("均值之差：{}".format(diff_mean))
+            # print("方差之差：{}".format(diff_var))
 
-            print("conv+BN输出的估计最小值：{}".format(mean - 3 * var))
-            print("conv+BN输出的估计最大值：{}".format(mean + 3 * var))
-            print("-----------$$$$$$-----------")
+            # C = out.shape[1]
+            #
+            # op = out.permute(1, 0, 2)
+            # op = op.reshape(C, -1)
+            #
+            # k = int(0.999 * op.size(1))  # 在第 0 维度（第一个维度）上计算第 90% 的位置
+            # percentile_90, _ = torch.kthvalue(op, k, dim=1)
+            #
+            # max_values_dim2, max_indices_dim2 = torch.max(op, dim=1)
+            # print("conv输出得到的最大值：{}".format(max_values_dim2))
+            # print("conv输出得到的99.9分位值：{}".format(percentile_90))
+            # print("BN层数据估计出来的最大值：{}".format(mean + 5*var))
+            # print("BN层数据估计出来的最小值：{}".format(mean - 3*var))
+            #
+            #
+            # print("-----------$$$$$$-----------")
 
+
+            # tensor = op[0].cpu()
+            # # 将张量转换为 NumPy 数组
+            # numpy_data = tensor.numpy()
+            #
+            # # 使用 Seaborn 绘制数据分布图
+            # plt.figure(figsize=(8, 6))
+            # sns.histplot(numpy_data, bins=200, kde=True, color='blue')
+            # plt.title('Tensor Data Distribution')
+            # plt.xlabel('Value')
+            # plt.ylabel('Frequency')
+            # plt.grid(True)
+            # plt.show()
 
         out = self.norm_function(out)
         out = self.activation_function(out)
