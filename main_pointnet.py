@@ -362,7 +362,7 @@ if __name__ == '__main__':
     """
        qnn是经过BN fold和开启量化状态的 （is_fusing=True）
     """
-    qnn = QuantModel(model=cnn, weight_quant_params=wq_params, act_quant_params=aq_params)
+    qnn = QuantModel(model=cnn, weight_quant_params=wq_params, act_quant_params=aq_params, is_fusing=False)
     qnn.cuda()
     qnn.eval()
 
