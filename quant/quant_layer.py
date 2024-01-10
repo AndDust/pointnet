@@ -141,6 +141,11 @@ class UniformAffineQuantizer(nn.Module):
             else:
                 self.delta, self.zero_point = self.init_quantization_scale(x.clone().detach(), self.channel_wise)
 
+            if self.is_act:
+                print("scale:{} zero_point:{}".format(self.delta, self.zero_point))
+
+
+
         # start quantization
         x_int = round_ste(x / self.delta) + self.zero_point
         x_quant = torch.clamp(x_int, 0, self.n_levels - 1)
@@ -391,9 +396,9 @@ class UniformAffineQuantizer(nn.Module):
     def init_quantization_scale_channel(self, x: torch.Tensor):
         """使用mse方法来确定动态范围"""
         x_min, x_max = self.get_x_min_x_max(x)
-        if self.is_act:
-            print("得到的x_min:{}".format(x_min))
-            print("得到的x_max:{}".format(x_max))
+        # if self.is_act:
+        #     print("得到的x_min:{}".format(x_min))
+        #     print("得到的x_max:{}".format(x_max))
         return self.calculate_qparams(x_min, x_max)
 
     """
@@ -482,14 +487,14 @@ class QuantModule(nn.Module):
             self.bias = None
             self.org_bias = None
 
-        if hasattr(org_module, 'bn_weight'):
-            self.bn_weight = org_module.bn_weight
-        if hasattr(org_module, 'bn_bias'):
-            self.bn_bias = org_module.bn_bias
-        if hasattr(org_module, 'running_mean'):
-            self.running_mean = org_module.running_mean
-        if hasattr(org_module, 'running_var'):
-            self.running_var = org_module.running_var
+        # if hasattr(org_module, 'bn_weight'):
+        #     self.bn_weight = org_module.bn_weight
+        # if hasattr(org_module, 'bn_bias'):
+        #     self.bn_bias = org_module.bn_bias
+        # if hasattr(org_module, 'running_mean'):
+        #     self.running_mean = org_module.running_mean
+        # if hasattr(org_module, 'running_var'):
+        #     self.running_var = org_module.running_var
 
         """停用量化前向传播默认值"""
         # de-activate the quantized forward default
