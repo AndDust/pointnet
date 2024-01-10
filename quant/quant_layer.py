@@ -5,6 +5,7 @@ from typing import Union
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import math
 
 """
     直通
@@ -390,6 +391,9 @@ class UniformAffineQuantizer(nn.Module):
     def init_quantization_scale_channel(self, x: torch.Tensor):
         """使用mse方法来确定动态范围"""
         x_min, x_max = self.get_x_min_x_max(x)
+        if self.is_act:
+            print("得到的x_min:{}".format(x_min))
+            print("得到的x_max:{}".format(x_max))
         return self.calculate_qparams(x_min, x_max)
 
     """
@@ -537,31 +541,47 @@ class QuantModule(nn.Module):
 
         out = self.fwd_func(input, weight, bias, **self.fwd_kwargs)
 
+        if self.act_quantizer.inited == False:
+            print("out.shape:{}".format(out.shape))
+
         # disable act quantization is designed for convolution before elemental-wise operation,
         # in that case, we apply activation function and quantization after ele-wise op.
-        # if self.act_quantizer.inited == False:
-        #     mean = self.norm_function.running_mean
-        #     var = self.norm_function.running_var
-        #
-        #     C = out.shape[1]
-        #     op = out.permute(0, 2, 1)
-        #     op = op.reshape(-1, C)
-        #
-        #     k = int(0.999 * op.size(0))
-        #     percentile_90, _ = torch.kthvalue(op, k, dim=0)
-        #
-        #     max_values_dim2, max_indices_dim2 = torch.max(op, dim=0)
-        #     print("conv输出得到的最大值：{}".format(torch.max(max_values_dim2)))
-        #     print("conv输出得到的99.9分位值：{}".format(torch.max(percentile_90)))
-        #     print("BN层数据估计出来的最大值：{}".format(torch.max(mean + 3*torch.sqrt(var))))
+        if self.act_quantizer.inited == False and isinstance(self.norm_function,(nn.BatchNorm2d, nn.BatchNorm1d)):
+            mean = self.norm_function.running_mean
+            var = self.norm_function.running_var
+
+            C = out.shape[1]
+            op = None
+            if out.dim() == 3:
+                op = out.permute(0, 2, 1)
+                op = op.reshape(-1, C)
+            else:
+                op = out
+
+            k = int(0.999 * op.size(0))
+            percentile_90, _ = torch.kthvalue(op, k, dim=0)
+
+            max_values_dim2, max_indices_dim2 = torch.max(op, dim=0)
+            print("conv输出得到的最大值：{}".format(torch.max(max_values_dim2)))
+            # print("conv输出得到的99.9分位值：{}".format(torch.max(percentile_90)))
+            # n = torch.numel(op)
+            # s = (n-1)/math.sqrt(n)
+            # print("n的大小：{} s的大小：{}".format(n, s))
+            print("BN层数据估计出来的最大值：{}".format(torch.max(mean + 3*torch.sqrt(var))))
+
+            print("conv输出得到的最小值：{}".format(torch.min(max_values_dim2)))
+            print("BN层数据估计出来的最小值：{}".format(torch.max(mean - 3 * torch.sqrt(var))))
+
+        if self.disable_act_quant:
+            out = out
+        if self.use_act_quant:
+            out = self.act_quantizer(out)
 
         out = self.norm_function(out)
         out = self.activation_function(out)
-        if self.disable_act_quant:
-            return out
-        if self.use_act_quant:
-            out = self.act_quantizer(out)
+
         return out
+
 
     def set_quant_state(self, weight_quant: bool = False, act_quant: bool = False):
         self.use_weight_quant = weight_quant
