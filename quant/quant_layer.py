@@ -142,8 +142,8 @@ class UniformAffineQuantizer(nn.Module):
             else:
                 self.delta, self.zero_point = self.init_quantization_scale(x.clone().detach(), self.channel_wise)
 
-        if self.is_act and self.inited == True:
-            print("self.delta:{}".format(self.delta))
+        # if self.is_act and self.inited == True:
+        #     print("self.delta:{}".format(self.delta))
 
             # self.delta = 2 * self.bn_estimate_abs_max / (self.n_levels -1)
             # self.zero_point = 0
@@ -543,9 +543,11 @@ class QuantModule(nn.Module):
             # print("Org_weight_shape:{}".format(self.org_weight.shape))
             # print("Org_weight:{}".format(self.org_weight.flatten()[0:10]))
             # print("delta:{} & zero_point:{}".format(self.weight_quantizer.delta.flatten(), self.weight_quantizer.zero_point.flatten()))
-            print("量化之前权重：{}",format(self.weight))
+
+            # print("量化之前权重：{}",format(self.weight))
             weight = self.weight_quantizer(self.weight)
-            print("量化之后的权重：{}", format(weight))
+            # print("量化之后的权重：{}", format(weight))
+
             # print("Quantized_weight:{}".format(weight.flatten()[0:10]))
             # print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
             bias = self.bias
