@@ -8,6 +8,7 @@ from .adaptive_rounding import AdaRoundQuantizer
 from .set_weight_quantize_params import get_init, get_dc_fp_init
 from .set_act_quantize_params import set_act_quantize_params
 from .quant_block import BaseQuantBlock, specials_unquantized
+import torch.nn as nn
 
 
 include = False
@@ -97,10 +98,10 @@ def layer_reconstruction(model: QuantModel, fp_model: QuantModel, layer: QuantMo
         得到输入qnn该layer的inputs  cached_inps.shape : torch.Size([1024, 3, 224, 224])
         cached_inps ： \hat{A_{l-1}} 相当于去取论文中图3中的A_{l-1}^{FP}
     """
-    cali_data = cali_data.transpose(1, 2)
-
-    cached_inps = get_init(model, layer, cali_data, batch_size=batch_size,
-                                        input_prob=True, keep_gpu=keep_gpu)
+    # cali_data = cali_data.transpose(1, 2)
+    #
+    # cached_inps = get_init(model, layer, cali_data, batch_size=batch_size,
+    #                                     input_prob=True, keep_gpu=keep_gpu)
 
     """
         这一步输入fp_model和fp_layer
@@ -123,7 +124,8 @@ def layer_reconstruction(model: QuantModel, fp_model: QuantModel, layer: QuantMo
         
         把这个输入送入这个layer，利用校准数据集，对于激活去初始化得到一个scale
     """
-    set_act_quantize_params(layer, cali_data=cached_inps[:min(256, cached_inps.size(0))])
+    set_act_quantize_params(layer, None, 100)
+
 
     return
 

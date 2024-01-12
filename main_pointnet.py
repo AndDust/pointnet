@@ -375,7 +375,7 @@ if __name__ == '__main__':
 
     """得到量化后的模型"""
     print('the quantized model is below!')
-    print(qnn)
+    # print(qnn)
 
 
     pointnet_cali_data, pointnet_cali_target = get_train_samples(dataloader, num_samples=args.pointnet_num_samples)
@@ -425,9 +425,6 @@ if __name__ == '__main__':
     """
     def set_weight_act_quantize_params(module, fp_module):
         if isinstance(module, QuantModule):
-            """
-                传入完整的qnn、fp_model和当前的module、fp_module
-            """
             layer_reconstruction(qnn, fp_model, module, fp_module, **kwargs)
         elif isinstance(module, BaseQuantBlock):
             block_reconstruction(qnn, fp_model, module, fp_module, **kwargs)
