@@ -55,7 +55,7 @@ def set_act_quantize_params(module: Union[QuantModel, QuantModule, BaseQuantBloc
     #     print("conv输出得到的最小值：{}".format(torch.min(max_values_dim2)))
     #     print("BN层数据估计出来的最小值：{}".format(torch.max(mean - 3 * torch.sqrt(var))))
     #
-        module.act_quantizer.bn_estimate_abs_max = torch.max(mean + 3 * torch.sqrt(var))
+        module.act_quantizer.bn_estimate_abs_max = torch.max(torch.abs(mean + 3 * torch.sqrt(var)))
         print("bn_estimate_abs_max:{}".format(module.act_quantizer.bn_estimate_abs_max))
 
         module.act_quantizer.delta = 2 * module.act_quantizer.bn_estimate_abs_max / (module.act_quantizer.n_levels - 1)
