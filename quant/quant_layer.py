@@ -596,10 +596,10 @@ class QuantModule(nn.Module):
             # if self.count == 0:
             #     print("disable_act_quant情况下的输出out:{}".format(out))
             #     self.count +=1
-        if self.use_act_quant and not self.disable_act_quant:
-            pre = out
-            out = self.act_quantizer(out)
-            latter = out
+        # if self.use_act_quant and not self.disable_act_quant:
+        #     pre = out
+        #     out = self.act_quantizer(out)
+        #     latter = out
 
             # if self.count == 0:
             #     print("pre:{}".format(pre))
@@ -608,6 +608,10 @@ class QuantModule(nn.Module):
 
 
         out = self.norm_function(out)
+        if self.use_act_quant and not self.disable_act_quant:
+            # pre = out
+            out = self.act_quantizer(out)
+            # latter = out
         out = self.activation_function(out)
 
         return out
