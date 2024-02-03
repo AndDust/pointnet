@@ -153,8 +153,14 @@ class PointNetCls(nn.Module):
     def __init__(self, k=2, feature_transform=False):
         super(PointNetCls, self).__init__()
         self.feature_transform = feature_transform
+        """
+            获取到的全局特征
+        """
         self.feat = PointNetfeat(global_feat=True, feature_transform=feature_transform)
 
+        """ 
+            如果是做分类，则走下面的mlp
+        """
         self.fc1 = nn.Linear(1024, 512)
         self.bn1 = nn.BatchNorm1d(512)
         self.relu1 = nn.ReLU()
@@ -188,7 +194,14 @@ class PointNetDenseCls(nn.Module):
         super(PointNetDenseCls, self).__init__()
         self.k = k
         self.feature_transform=feature_transform
+        """
+            获取到的全局特征
+        """
         self.feat = PointNetfeat(global_feat=False, feature_transform=feature_transform)
+
+        """ 
+            如果是做分割，则走下面的部分
+        """
         self.conv1 = torch.nn.Conv1d(1088, 512, 1)
         self.conv2 = torch.nn.Conv1d(512, 256, 1)
         self.conv3 = torch.nn.Conv1d(256, 128, 1)
